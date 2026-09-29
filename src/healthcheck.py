@@ -1,4 +1,5 @@
 import os
+import sys
 import pymqi
 
 QM_NAME = "QM1"
@@ -31,6 +32,7 @@ def main():
     print()
 
     qmgr = None
+    exit_code = 0
 
     try:
         print("Connecting to IBM MQ...")
@@ -66,6 +68,7 @@ def main():
                 if depth >= WARNING_THRESHOLD:
                     status = "WARNING"
                     overall_status = "WARNING"
+                    exit_code = 1
                 else:
                     status = "OK"
 
@@ -87,12 +90,15 @@ def main():
         print()
         print("Overall Status: FAILED")
         print(f"Error         : {error}")
+        exit_code = 2
 
     finally:
         if qmgr is not None:
             qmgr.disconnect()
             print("MQ Disconnect : SUCCESS")
 
+    return exit_code
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
