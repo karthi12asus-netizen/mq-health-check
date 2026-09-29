@@ -1,0 +1,21 @@
+name: MQ Health Check
+
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Workflow Execution
+        run: |
+          echo "=================================="
+          echo "MQ Health Check Workflow Triggered"
+          echo "=================================="
+          date
