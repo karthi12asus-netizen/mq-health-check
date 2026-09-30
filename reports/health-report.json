@@ -1,0 +1,23 @@
+{
+  "queue_manager": "QM1",
+  "host": "172.18.0.1",
+  "port": 1414,
+  "status": "HEALTHY",
+  "queues": [
+    {
+      "name": "APP.REQUEST",
+      "depth": 0,
+      "status": "OK"
+    },
+    {
+      "name": "APP.RESPONSE",
+      "depth": 0,
+      "status": "OK"
+    },
+    {
+      "name": "APP.ERROR",
+      "depth": 0,
+      "status": "OK"
+    }
+  ]
+}

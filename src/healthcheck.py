@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import pymqi
 
 QM_NAME = "QM1"
@@ -33,6 +34,14 @@ def main():
 
     qmgr = None
     exit_code = 0
+
+    report = {
+        "queue_manager": QM_NAME,
+        "host": HOST,
+        "port": PORT,
+        "status": "HEALTHY",
+        "queues": []
+    }
 
     try:
         print("Connecting to IBM MQ...")
@@ -68,6 +77,7 @@ def main():
                 if depth >= WARNING_THRESHOLD:
                     status = "WARNING"
                     overall_status = "WARNING"
+                    report["status"] = "WARNING"
                     exit_code = 1
                 else:
                     status = "OK"
@@ -78,6 +88,14 @@ def main():
                     f"Status: {status}"
                 )
 
+                report["queues"].append(
+                    {
+                        "name": queue_name,
+                        "depth": depth,
+                        "status": status,
+                    }
+                )
+
             finally:
                 queue.close()
 
@@ -86,15 +104,25 @@ def main():
         print(f"Overall Status: {overall_status}")
         print("-" * 40)
 
+        print()
+        print("JSON Report")
+        print("-" * 40)
+        print(json.dumps(report, indent=2))
+
     except Exception as error:
         print()
         print("Overall Status: FAILED")
         print(f"Error         : {error}")
+
+        report["status"] = "FAILED"
+        report["error"] = str(error)
+
         exit_code = 2
 
     finally:
         if qmgr is not None:
             qmgr.disconnect()
+            print()
             print("MQ Disconnect : SUCCESS")
 
     return exit_code
