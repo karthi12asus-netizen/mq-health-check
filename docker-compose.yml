@@ -1,29 +1,41 @@
 services:
+
   mq-health-app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: mq-health-app
+
     environment:
       MQ_HOST: 172.18.0.1
       MQ_PORT: "1414"
 
+    volumes:
+      - .:/app
+
+
   QM1:
     image: icr.io/ibm-messaging/mq:9.4.5.1-r1
     container_name: QM1
+
     environment:
       LICENSE: accept
       MQ_QMGR_NAME: QM1
+
     ports:
       - "1414:1414"
       - "9443:9443"
+
     volumes:
       - qm1data:/mnt/mqm
+
     secrets:
       - mqAppPassword
 
+
 volumes:
   qm1data:
+
 
 secrets:
   mqAppPassword:

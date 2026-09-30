@@ -1,0 +1,463 @@
+============================================================
+             MQ HEALTH CHECK - RUNBOOK
+============================================================
+
+Project:
+    mq-health-check
+
+Purpose:
+    IBM MQ health-check CLI and WebUI
+
+MQ Queue Manager:
+    QM1
+
+MQ Host:
+    172.18.0.1
+
+MQ Port:
+    1414
+
+MQ Channel:
+    DEV.APP.SVRCONN
+
+WebUI Port:
+    5000
+
+
+============================================================
+1. CHECK PROJECT
+============================================================
+
+Go to the project:
+
+cd /workspaces/mq-health-check
+
+Check files:
+
+ls
+
+Check Docker Compose:
+
+cat docker-compose.yml
+
+
+============================================================
+2. CHECK DOCKER / MQ STATUS
+============================================================
+
+Check running containers:
+
+docker ps
+
+Check MQ queue manager status:
+
+docker exec QM1 dspmq
+
+Expected when running:
+
+QMNAME(QM1) STATUS(Running)
+
+Expected when stopped:
+
+QMNAME(QM1) STATUS(Ended normally)
+
+
+============================================================
+3. START MQ QUEUE MANAGER
+============================================================
+
+Start the MQ container:
+
+docker start QM1
+
+Check status:
+
+docker exec QM1 dspmq
+
+Expected:
+
+QMNAME(QM1) STATUS(Running)
+
+
+============================================================
+4. STOP MQ QUEUE MANAGER
+============================================================
+
+Stop the MQ queue manager:
+
+docker exec QM1 endmqm QM1
+
+Check status:
+
+docker exec QM1 dspmq
+
+Expected:
+
+QMNAME(QM1) STATUS(Ended normally)
+
+
+============================================================
+5. RUN CLI HEALTH CHECK
+============================================================
+
+Run the health check inside the Docker environment:
+
+docker compose run --rm mq-health-app
+
+
+------------------------------------------------------------
+Expected result when MQ is RUNNING
+------------------------------------------------------------
+
+Overall Status: HEALTHY
+
+Queue Status:
+
+APP.REQUEST     Depth: 0     Status: OK
+APP.RESPONSE    Depth: 0     Status: OK
+APP.ERROR       Depth: 0     Status: OK
+
+
+------------------------------------------------------------
+Expected result when MQ is STOPPED
+------------------------------------------------------------
+
+Overall Status: FAILED
+
+Error:
+MQRC_HOST_NOT_AVAILABLE
+
+
+============================================================
+6. CHECK HEALTH REPORT
+============================================================
+
+View the generated report:
+
+cat reports/health-report.json
+
+The report contains:
+
+- Queue Manager
+- Host
+- Port
+- Overall Status
+- Queue names
+- Queue depths
+- Queue status
+- Error information when MQ is unavailable
+
+
+============================================================
+7. START THE WEBUI
+============================================================
+
+Start Flask WebUI:
+
+python webapp/app.py
+
+The WebUI runs on:
+
+http://127.0.0.1:5000
+
+In GitHub Codespaces:
+
+1. Open the PORTS tab.
+2. Find port 5000.
+3. Open the forwarded port in the browser.
+
+
+============================================================
+8. WEBUI BEHAVIOR
+============================================================
+
+The WebUI performs a fresh MQ health check.
+
+Flow:
+
+Browser
+   |
+   v
+Flask WebUI
+   |
+   v
+docker compose run --rm mq-health-app
+   |
+   v
+PyMQI
+   |
+   v
+IBM MQ QM1
+   |
+   v
+health-report.json
+   |
+   v
+Dashboard
+
+
+------------------------------------------------------------
+When MQ is RUNNING
+------------------------------------------------------------
+
+Dashboard:
+
+Status: HEALTHY
+
+APP.REQUEST   0   OK
+APP.RESPONSE  0   OK
+APP.ERROR     0   OK
+
+
+------------------------------------------------------------
+When MQ is STOPPED
+------------------------------------------------------------
+
+Dashboard:
+
+Status: FAILED
+
+MQ Error:
+MQRC_HOST_NOT_AVAILABLE
+
+Queue information will not be available because the
+MQ connection failed.
+
+
+============================================================
+9. WEBUI AUTO REFRESH
+============================================================
+
+The dashboard automatically refreshes every 30 seconds.
+
+HTML file:
+
+webapp/templates/dashboard.html
+
+The refresh setting is:
+
+<meta http-equiv="refresh" content="30">
+
+
+============================================================
+10. FILE STRUCTURE
+============================================================
+
+mq-health-check/
+|
+|-- src/
+|   |-- healthcheck.py
+|
+|-- webapp/
+|   |-- app.py
+|   |-- templates/
+|       |-- dashboard.html
+|
+|-- reports/
+|   |-- health-report.json
+|
+|-- docs/
+|   |-- RUNBOOK.txt
+|
+|-- Dockerfile
+|-- docker-compose.yml
+|-- requirements.txt
+|-- mq-app-password.txt
+
+
+============================================================
+11. DOCKER HEALTH APP
+============================================================
+
+Build the health-check image:
+
+docker compose build mq-health-app
+
+Run the CLI health check:
+
+docker compose run --rm mq-health-app
+
+Check Docker images:
+
+docker images
+
+Check containers:
+
+docker ps -a
+
+
+============================================================
+12. TROUBLESHOOTING
+============================================================
+
+Problem:
+    WebUI shows old/stale HEALTHY status.
+
+Check:
+
+cat reports/health-report.json
+
+Run a fresh CLI health check:
+
+docker compose run --rm mq-health-app
+
+
+------------------------------------------------------------
+
+Problem:
+    Python says:
+
+    ModuleNotFoundError: No module named 'pymqi'
+
+Do NOT run:
+
+python src/healthcheck.py
+
+from the Codespace Python environment.
+
+Instead use:
+
+docker compose run --rm mq-health-app
+
+PyMQI is installed inside the Docker health-check image.
+
+
+------------------------------------------------------------
+
+Problem:
+    MQ health check returns:
+
+    MQRC_HOST_NOT_AVAILABLE
+
+Check MQ:
+
+docker exec QM1 dspmq
+
+If stopped, start it:
+
+docker start QM1
+
+Then verify:
+
+docker exec QM1 dspmq
+
+
+------------------------------------------------------------
+
+Problem:
+    Need to stop the WebUI.
+
+Press:
+
+Ctrl + C
+
+
+============================================================
+13. COMPLETE NORMAL STARTUP
+============================================================
+
+From the project directory:
+
+cd /workspaces/mq-health-check
+
+Start MQ:
+
+docker start QM1
+
+Check MQ:
+
+docker exec QM1 dspmq
+
+Run CLI health check:
+
+docker compose run --rm mq-health-app
+
+Start WebUI:
+
+python webapp/app.py
+
+Open GitHub Codespaces PORTS tab.
+
+Open port:
+
+5000
+
+
+============================================================
+14. COMPLETE STOP / TEST FAILURE
+============================================================
+
+Stop MQ:
+
+docker exec QM1 endmqm QM1
+
+Verify:
+
+docker exec QM1 dspmq
+
+Run CLI:
+
+docker compose run --rm mq-health-app
+
+Expected:
+
+Overall Status: FAILED
+
+Refresh WebUI.
+
+Expected:
+
+Status: FAILED
+
+
+============================================================
+15. RECOVERY TEST
+============================================================
+
+Start MQ:
+
+docker start QM1
+
+Verify:
+
+docker exec QM1 dspmq
+
+Run CLI:
+
+docker compose run --rm mq-health-app
+
+Expected:
+
+Overall Status: HEALTHY
+
+Refresh WebUI.
+
+Expected:
+
+Status: HEALTHY
+
+
+============================================================
+16. GIT COMMANDS
+============================================================
+
+Check changes:
+
+git status
+
+Add the runbook:
+
+git add docs/RUNBOOK.txt
+
+Commit:
+
+git commit -m "Add MQ health check runbook"
+
+Push:
+
+git push
+
+
+============================================================
+END OF RUNBOOK
+============================================================

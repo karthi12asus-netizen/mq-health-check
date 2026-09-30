@@ -3,22 +3,20 @@ import sys
 import json
 import pymqi
 
-QM_NAME = "QM1"
-CHANNEL = "DEV.APP.SVRCONN"
-
+QM_NAME = os.getenv("MQ_QMGR", "QM1")
 HOST = os.getenv("MQ_HOST", "172.18.0.1")
 PORT = int(os.getenv("MQ_PORT", "1414"))
+CHANNEL = os.getenv("MQ_CHANNEL", "DEV.APP.SVRCONN")
+USERNAME = os.getenv("MQ_USER", "app")
+PASSWORD = os.getenv("MQ_PASSWORD", "passw0rd")
 
-USERNAME = "app"
-PASSWORD = "MQhealth123"
+WARNING_THRESHOLD = 10
 
 QUEUES = [
     "APP.REQUEST",
     "APP.RESPONSE",
     "APP.ERROR",
 ]
-
-WARNING_THRESHOLD = 10
 
 
 def main():
@@ -40,7 +38,7 @@ def main():
         "host": HOST,
         "port": PORT,
         "status": "HEALTHY",
-        "queues": []
+        "queues": [],
     }
 
     try:
@@ -57,12 +55,13 @@ def main():
         print("Connection    : SUCCESS")
         print()
 
-        overall_status = "HEALTHY"
-
         print("Queue Status")
         print("-" * 40)
 
+        overall_status = "HEALTHY"
+
         for queue_name in QUEUES:
+
             queue = pymqi.Queue(
                 qmgr,
                 queue_name,
@@ -77,7 +76,6 @@ def main():
                 if depth >= WARNING_THRESHOLD:
                     status = "WARNING"
                     overall_status = "WARNING"
-                    report["status"] = "WARNING"
                     exit_code = 1
                 else:
                     status = "OK"
@@ -99,6 +97,8 @@ def main():
             finally:
                 queue.close()
 
+        report["status"] = overall_status
+
         print()
         print("-" * 40)
         print(f"Overall Status: {overall_status}")
@@ -109,7 +109,16 @@ def main():
         print("-" * 40)
         print(json.dumps(report, indent=2))
 
+        os.makedirs("reports", exist_ok=True)
+
+        with open("reports/health-report.json", "w") as report_file:
+            json.dump(report, report_file, indent=2)
+
+        print()
+        print("Report saved to reports/health-report.json")
+
     except Exception as error:
+
         print()
         print("Overall Status: FAILED")
         print(f"Error         : {error}")
@@ -117,9 +126,15 @@ def main():
         report["status"] = "FAILED"
         report["error"] = str(error)
 
+        os.makedirs("reports", exist_ok=True)
+
+        with open("reports/health-report.json", "w") as report_file:
+            json.dump(report, report_file, indent=2)
+
         exit_code = 2
 
     finally:
+
         if qmgr is not None:
             qmgr.disconnect()
             print()
